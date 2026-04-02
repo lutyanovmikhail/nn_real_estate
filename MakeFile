@@ -1,0 +1,33 @@
+.PHONY: help install test clean format lint train
+
+help:
+	@echo "Доступные команды:"
+	@echo "  make install  - Установить зависимости"
+	@echo "  make test     - Запустить тесты"
+	@echo "  make clean    - Очистить временные файлы"
+	@echo "  make format   - Отформатировать код (black)"
+	@echo "  make lint     - Проверить код (flake8)"
+	@echo "  make train    - Обучить модель"
+
+install:
+	pip install --upgrade pip
+	pip install -r requirements.txt
+
+test:
+	pytest tests/ -v --cov=src
+
+clean:
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete
+	rm -rf .pytest_cache
+	rm -rf .coverage
+	rm -rf htmlcov
+
+format:
+	black src/ tests/
+
+lint:
+	flake8 src/ tests/ --max-line-length=100
+
+train:
+	python src/models/train.py
