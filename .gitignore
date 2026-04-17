@@ -22,13 +22,9 @@ dmypy.json
 *.ipynb~
 *.ipynb_checkpoints/
 
-# Project specific (данные и модели)
+# Project specific 
 data/raw/
 data/processed/
-models/
-*.pkl
-*.joblib
-
 # IDE
 .idea/
 .vscode/
