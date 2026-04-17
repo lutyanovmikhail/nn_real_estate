@@ -214,10 +214,8 @@ cian_df = pd.read_csv(PROJECT_ROOT / 'data' / 'raw' / 'cian_02_04.csv',
                       on_bad_lines='skip'
                       )
 cian_df = cian_df.rename(columns={'disctrict': 'district'})
-# Импорт csv
 giper_nn_df = standardize_gipernn(giper_nn_df)
 cian_df = standardize_cian(cian_df)
-# Приведение к единому формату
 merged_df = pd.concat([giper_nn_df, cian_df], ignore_index=True)
 before = len(merged_df)
 merged_df = merged_df.drop_duplicates(subset=['total_area', 'current_floor', 'max_floor', 'district', 'price'])
