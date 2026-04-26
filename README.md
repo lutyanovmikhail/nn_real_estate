@@ -182,3 +182,6 @@ python src/models/predict_model.py
 ## Стек
 
 `Python` `CatBoost` `pandas` `numpy` `scipy` `scikit-learn` `optuna` `geopy` `seaborn` `matplotlib` `statsmodels`
+
+"Модель предсказала цену квартиры моего брата 
+с точностью 0.56% от реальной цены сделки"

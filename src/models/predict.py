@@ -6,86 +6,86 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
-def load_model(model_path: Path):
-    """Загружает сохранённую модель"""
-    model = joblib.load(model_path)
-    print(f" Модель загружена: {model_path}")
-    return model
+def load_model(model_path: Path) -> dict:
+    """Загружает модель и вспомогательные объекты."""
+    bundle = joblib.load(model_path)
+    print(f"Модель загружена: {model_path}")
+    return bundle
 
 
-def prepare_features_for_prediction(df: pd.DataFrame) -> pd.DataFrame:
-    """Подготавливает признаки для предсказания (как в train_model)"""
-    df = df.copy()
+def prepare_features(input_data: dict, target_map: dict, global_mean_m2: float) -> pd.DataFrame:
+    """
+    Подготавливает признаки для предсказания.
+    Честно применяет target encoding через target_map из трейна.
+    """
+    df = pd.DataFrame([input_data])
 
-    # Создаём признаки, если их нет
-    if 'is_center' not in df.columns and 'distance_to_center' in df.columns:
-        df['is_center'] = (df['distance_to_center'] < 1.5).astype(int)
+    # house_segment нужен для target encoding
+    df['house_segment'] = pd.cut(
+        df['max_floor'],
+        bins=[0, 5, 10, 19, 100],
+        labels=['low', 'standard', 'modern', 'high']
+    )
 
-    if 'is_near_metro' not in df.columns and 'distance_to_metro' in df.columns:
-        df['is_near_metro'] = (df['distance_to_metro'] < 1).astype(int)
+    # Target encoding: средняя цена м² по district + house_segment
+    df['avg_price_m2_segmented'] = (
+        df.set_index(['district', 'house_segment'])
+        .index.map(target_map.get)
+    )
+    df['avg_price_m2_segmented'] = df['avg_price_m2_segmented'].fillna(global_mean_m2)
 
-    features = [
-        'rooms', 'total_area', 'year', 'living_area', 'kitchen_area',
-        'current_floor', 'max_floor', 'is_center', 'is_near_metro',
-        'kitchen_ratio', 'area_floor_interaction', 'area_ratio_to_district',
-        'distance_to_center', 'distance_to_metro',
-        'district', 'material', 'mini_disctrict', 'district_ready', 'material_age', 'metro'
-    ]
+    # Категориальные признаки
+    cat_features = ['district', 'material', 'district_ready', 'mini_disctrict', 'material_age']
+    for col in cat_features:
+        if col in df.columns:
+            df[col] = df[col].astype(str).fillna('unknown').replace('nan', 'unknown')
 
-    categorical_features = [
-        'district', 'material', 'mini_disctrict', 'district_ready', 'material_age', 'metro'
-    ]
-
-    X = df[features].copy()
-
-    for col in categorical_features:
-        if col in X.columns:
-            X[col] = X[col].astype(str).fillna('unknown')
-
-    return X
+    return df
 
 
-def predict_price(model, input_data: dict) -> float:
+def predict_price(bundle: dict, input_data: dict) -> float:
     """
     Предсказывает цену квартиры.
 
+    bundle: словарь из joblib.load (model, target_map, global_mean_m2, features)
     input_data: словарь с признаками квартиры
     """
-    df_input = pd.DataFrame([input_data])
-    X = prepare_features_for_prediction(df_input)
-    pred_log = model.predict(X)[0]
+    model         = bundle['model']
+    target_map    = bundle['target_map']
+    global_mean   = bundle['global_mean_m2']
+    features      = bundle['features']
+
+    df = prepare_features(input_data, target_map, global_mean)
+
+    pred_log   = model.predict(df[features])[0]
     pred_price = np.exp(pred_log)
     return pred_price
 
 
 if __name__ == "__main__":
-    # Пути
     model_path = PROJECT_ROOT / 'models' / 'catboost_model.pkl'
 
-    # Загружаем модель
-    model = load_model(model_path)
+    bundle = load_model(model_path)
 
-    # Пример входных данных
+    # Пример: 2-комнатная квартира в Автозаводском районе
     example_flat = {
-        'rooms': 2,
-        'total_area': 47.0,
-        'year': 2026,
-        'living_area': 28.0,
-        'kitchen_area': 11.5,
-        'current_floor': 7,
-        'max_floor': 17,
-        'distance_to_center': 19.2,
-        'distance_to_metro': 8,
-        'district': 'Автозаводский район',
-        'material': 'панель',
-        'mini_disctrict': 'unknown',
-        'district_ready': 'Автозаводский район_0',
-        'material_age': 'кирпич_0',
-        'metro': 8,
-        'kitchen_ratio': 11.5 / 47.0,
-        'area_floor_interaction': 47.0 * 7,
-        'area_ratio_to_district': 1.0  # приблизительно
+        'rooms':              2,
+        'total_area':         47.0,
+        'year':               1.0,        # лет с постройки
+        'kitchen_area':       11.6,
+        'current_floor':      7,
+        'max_floor':          17,
+        'distance_to_center': 9.2,
+        'distance_to_metro':  3.5,
+        'district':           'Автозаводский район',
+        'material':           'панель',
+        'mini_disctrict':     'unknown',
+        'district_ready':     'Автозаводский район_1.0',
+        'material_age':       'панель_False',
+        # Производные признаки
+        'area_floor_interaction':  47.0 * 7,
+        'area_ratio_to_district':  1.0,   # приблизительно среднее по району
     }
 
-    price = predict_price(model, example_flat)
-    print(f"\n Предсказанная цена: {price:,.0f} ₽ ({price / 1_000_000:.2f} млн ₽)")
+    price = predict_price(bundle, example_flat)
+    print(f"\nПредсказанная цена: {price:,.0f} ₽  ({price / 1_000_000:.2f} млн ₽)")
