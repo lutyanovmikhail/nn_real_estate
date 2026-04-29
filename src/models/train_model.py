@@ -55,7 +55,7 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
 def add_target_encoding(X_train: pd.DataFrame,
                         X_test: pd.DataFrame,
                         y_train_log: pd.Series) -> tuple:
-    """Честный target encoding: среднее цена/м² по district+house_segment.
+    """Честный target encoding: среднее цена/м^2 по district+house_segment.
     Считается только на трейне, применяется к обеим выборкам.
     """
     train_temp = X_train.copy()
