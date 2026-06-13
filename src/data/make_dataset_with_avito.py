@@ -1,8 +1,9 @@
 import pandas as pd
-
-df_main  = pd.read_csv('/Users/apch/Pycharmproekti/nn_real_estate/data/processed/dataset_with_geo.csv')
-df_avito = pd.read_csv('/Users/apch/Pycharmproekti/nn_real_estate/data/processed/avito_processed.csv')
-
+from pathlib import Path
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
+df_main = pd.read_csv(PROJECT_ROOT / "data" / "processed" / "dataset_with_geo.csv")
+df_avito = pd.read_csv(PROJECT_ROOT / "data" / "processed" / "avito_processed.csv")
 print(f"Основной датасет: {len(df_main)} строк")
 print(f"Авито: {len(df_avito)} строк")
 print(f"Колонки основного: {sorted(df_main.columns.tolist())}")

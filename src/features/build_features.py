@@ -7,7 +7,7 @@ from time import sleep
 import re
 import json
 import math
-PROJECT_ROOT = Path('/Users/apch/Pycharmproekti/nn_real_estate')
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 df = pd.read_csv(PROJECT_ROOT / 'data' / 'processed' / 'dataset_before_fe.csv')
 print(df.columns)
 df['is_last_floor'] = (df['current_floor'] == df['max_floor']).astype(int) # Создание признака последнего этажа
